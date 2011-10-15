@@ -1,0 +1,79 @@
+--- string.c.org	2011-10-15 13:18:42.228067685 +0000
++++ string.c	2011-10-15 13:36:04.062694910 +0000
+@@ -2147,17 +2147,43 @@
+    Returns part of a string */
+ PHP_FUNCTION(substr)
+ {
++	zval ***params;
+ 	char *str;
+ 	long l = 0, f;
+ 	int str_len;
+ 	int argc = ZEND_NUM_ARGS();
+ 	
+-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "sl|l", &str, &str_len, &f, &l) == FAILURE) {
+-		return;
++
++	params = safe_emalloc(sizeof(zval **), argc, 0);
++
++    if (zend_get_parameters_array_ex(argc, params) == FAILURE) {
++        efree(params);
++        RETURN_FALSE
++    }    
++
++	if (Z_TYPE_PP(params[0]) != IS_STRING){
++        SEPARATE_ZVAL(params[0]);
++		convert_to_string_ex(params[0]);
+ 	}
+ 
++	if (Z_TYPE_PP(params[1]) != IS_LONG){
++        SEPARATE_ZVAL(params[1]);
++		convert_to_long_ex(params[1]);
++	}
++
++
++	str = Z_STRVAL_PP(params[0]);
++	str_len = Z_STRLEN_PP(params[0]);
++	f = Z_LVAL_PP(params[1]);
++
+ 	if (argc > 2) {
++		if (Z_TYPE_PP(params[2]) != IS_LONG){
++	        SEPARATE_ZVAL(params[2]);
++			convert_to_long_ex(params[2]);
++		}
++		l = Z_LVAL_PP(params[2]);
+ 		if ((l < 0 && -l > str_len)) {
++			efree(params);
+ 			RETURN_FALSE;
+ 		} else if (l > str_len) {
+ 			l = str_len;
+@@ -2167,12 +2193,14 @@
+ 	}
+ 	
+ 	if (f > str_len) {
++		efree(params);
+ 		RETURN_FALSE;
+ 	} else if (f < 0 && -f > str_len) {
+ 		f = 0;
+ 	}
+ 
+ 	if (l < 0 && (l + str_len - f) < 0) {
++		efree(params);
+ 		RETURN_FALSE;
+ 	}
+ 
+@@ -2197,6 +2225,7 @@
+ 	}
+ 
+ 	if (f >= str_len) {
++		efree(params);
+ 		RETURN_FALSE;
+ 	}
+ 
+@@ -2204,6 +2233,7 @@
+ 		l = str_len - f;
+ 	}
+ 
++	efree(params);
+ 	RETURN_STRINGL(str + f, l, 1);
+ }
+ /* }}} */
